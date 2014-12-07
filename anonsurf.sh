@@ -2,24 +2,24 @@
 
 ### BEGIN INIT INFO
 # Provides:          anonsurf
-# Required-Start:    tor
+# Required-Start:
 # Required-Stop:
-# Should-Stop:
-# Default-Start:      
-# Default-Stop:		  0 1 6
-# Short-Description: Anonymize the entire system under TOR.
+# Should-Start:
+# Default-Start:
+# Default-Stop:
+# Short-Description: Transparent Proxy through TOR.
 ### END INIT INFO
 
-# AnonSurf is inspired to the original backbox-anonymous script
-# distributed as part of backbox-default-settings package.
-# It was modified and forked from the homonimous module of PenMode, developed by the "Pirates' Crew" in order to make it fully compatible with
-# Parrot Security OS and other debian-based systems, and it is part of
+# AnonSurf is inspired by the homonimous module of PenMode, developed by the "Pirates' Crew" in
+# order to make it fully compatible with
+# Parrot  OS and other debian-based systems, and it is part of
 # parrot-anon package.
 #
 #
 # Devs:
 # Lorenzo 'EclipseSpark' Faletra <eclipse@frozenbox.org>
 # Lisetta 'Sheireen' Ferrero <sheireen@frozenbox.org>
+# Francesco 'mibofra'/'Eli Aran'/'SimpleSmibs' Bonanno <mibofra@ircforce.tk> <mibofra@frozenbox.org>
 #
 #
 # anonsurf is free software: you can redistribute it and/or
@@ -54,13 +54,22 @@ TOR_PORT="9040"
 
 
 
-
 function init {
 	echo -e -n " $GREEN*$BLUE killing dangerous applications"
-	killall -q "chrome dropbox iceweasel skype icedove thunderbird firefox chromium xchat transmission"
+	killall -q chrome dropbox iceweasel skype icedove thunderbird firefox chromium xchat transmission
 	
 	echo -e -n " $GREEN*$BLUE cleaning some dangerous caches"
-	bleachbit -c "adobe_reader.cache chromium.cache chromium.current_session chromium.history elinks.history emesene.cache epiphany.cache firefox.url_history flash.cache flash.cookies google_chrome.cache google_chrome.history  links2.history opera.cache opera.search_history opera.url_history system.cache system.memory system.recent_documents" >&2	
+	bleachbit -c adobe_reader.cache chromium.cache chromium.current_session chromium.history elinks.history emesene.cache epiphany.cache firefox.url_history flash.cache flash.cookies google_chrome.cache google_chrome.history  links2.history opera.cache opera.search_history opera.url_history system.cache system.memory system.recent_documents >&2	
+}
+
+function starti2p {
+	echo -e -n " $GREEN*$BLUE starting I2P services"
+	i2prouter start	
+}
+
+function stopi2p {
+	echo -e -n " $GREEN*$BLUE stopping I2P services"
+	i2prouter stop	
 }
 
 
@@ -93,7 +102,9 @@ function start {
 		echo -e 'VirtualAddrNetwork 10.192.0.0/10'
 		echo -e 'AutomapHostsOnResolve 1'
 		echo -e 'TransPort 9040'
+		echo -e 'SocksPort 9050'
 		echo -e 'DNSPort 53'
+		echo -e 'RunAsDaemon 1'
 		echo -e "$BLUE#----------------------------------------------------------------------#$RESETCOLOR\n"
 	exit 1
 	fi
@@ -104,7 +115,9 @@ function start {
 		echo -e 'VirtualAddrNetwork 10.192.0.0/10'
 		echo -e 'AutomapHostsOnResolve 1'
 		echo -e 'TransPort 9040'
+		echo -e 'SocksPort 9050'
 		echo -e 'DNSPort 53'
+		echo -e 'RunAsDaemon 1'
 		echo -e "$BLUE#----------------------------------------------------------------------#$RESETCOLOR\n"
 		exit 1
 	fi
@@ -115,9 +128,24 @@ function start {
 		echo -e 'VirtualAddrNetwork 10.192.0.0/10'
 		echo -e 'AutomapHostsOnResolve 1'
 		echo -e 'TransPort 9040'
+		echo -e 'SocksPort 9050'
 		echo -e 'DNSPort 53'
+		echo -e 'RunAsDaemon 1'
 		echo -e "$BLUE#----------------------------------------------------------------------#$RESETCOLOR\n"
 	exit 1
+	fi
+	grep -q -x 'SocksPort 9050' /etc/tor/torrc
+	if [ $? -ne 0 ]; then
+		echo -e "\n$RED[!] Please add the following to your /etc/tor/torrc and restart service:$RESETCOLOR\n" >&2
+		echo -e "$BLUE#----------------------------------------------------------------------#$RESETCOLOR"
+		echo -e 'VirtualAddrNetwork 10.192.0.0/10'
+		echo -e 'AutomapHostsOnResolve 1'
+		echo -e 'TransPort 9040'
+		echo -e 'SocksPort 9050'
+		echo -e 'DNSPort 53'
+		echo -e 'RunAsDaemon 1'
+		echo -e "$BLUE#----------------------------------------------------------------------#$RESETCOLOR\n"
+	#exit 1
 	fi
 	grep -q -x 'DNSPort 53' /etc/tor/torrc
 	if [ $? -ne 0 ]; then
@@ -126,15 +154,34 @@ function start {
 		echo -e 'VirtualAddrNetwork 10.192.0.0/10'
 		echo -e 'AutomapHostsOnResolve 1'
 		echo -e 'TransPort 9040'
+		echo -e 'SocksPort 9050'
 		echo -e 'DNSPort 53'
+		echo -e 'RunAsDaemon 1'
 		echo -e "$BLUE#----------------------------------------------------------------------#$RESETCOLOR\n"
 		exit 1
+	fi
+	grep -q -x 'RunAsDaemon 1' /etc/tor/torrc
+	if [ $? -ne 0 ]; then
+		echo -e "\n$RED[!] Please add the following to your /etc/tor/torrc and restart service:$RESETCOLOR\n" >&2
+		echo -e "$BLUE#----------------------------------------------------------------------#$RESETCOLOR"
+		echo -e 'VirtualAddrNetwork 10.192.0.0/10'
+		echo -e 'AutomapHostsOnResolve 1'
+		echo -e 'TransPort 9040'
+		echo -e 'SocksPort 9050'
+		echo -e 'DNSPort 53'
+		echo -e 'RunAsDaemon 1'
+		echo -e "$BLUE#----------------------------------------------------------------------#$RESETCOLOR\n"
+		#exit 1
 	fi
 	
 	echo -e "\n$GREEN[$BLUE i$GREEN ]$BLUE Starting anonymous mode:$RESETCOLOR\n"
 	
 	if [ ! -e /var/run/tor/tor.pid ]; then
-		echo -e " $RED*$BLUE Tor is not running! $GREEN starting $BLUE for you\n" >&2
+		echo -e " $RED*$BLUE Tor is not running! $GREEN starting it $BLUE for you\n" >&2
+		echo -e -n " $GREEN*$BLUE Service " 
+		service resolvconf stop 2>/dev/null || echo -e "resolvconf already stopped"
+		service dnsmasq stop
+		service nscd stop
 		service tor start
 		sleep 6
 	fi
@@ -146,11 +193,8 @@ function start {
 	iptables -F
 	iptables -t nat -F
 	
-	echo -e -n " $GREEN*$BLUE Service "
-	service resolvconf stop 2>/dev/null || echo -e "resolvconf already stopped"
-	
 	echo -e 'nameserver 127.0.0.1\nnameserver 199.175.54.136' > /etc/resolv.conf
-	echo -e " $GREEN*$BLUE Modified resolv.conf to use Tor"
+	echo -e " $GREEN*$BLUE Modified resolv.conf to use Tor and FrozenDNS"
 
 	# set iptables nat
 	iptables -t nat -A OUTPUT -m owner --uid-owner $TOR_UID -j RETURN
@@ -208,34 +252,45 @@ function stop {
 	if [ -f /etc/network/iptables.rules ]; then
 		iptables-restore < /etc/network/iptables.rules
 		rm /etc/network/iptables.rules
-		echo -e " $GREEN*$BLUE Restored iptables rules"
+		echo -e " $GREEN*$BLUE Iptables rules restored"
 	fi
 	echo -e -n " $GREEN*$BLUE Service "
+	service tor stop
 	service resolvconf start 2>/dev/null || echo -e "resolvconf already started"
+	service nscd start
+	service network-manager restart
+	service dnsmasq start
 	sleep 1
 	
-	echo -e " $GREEN*$BLUE Stopped anonymous mode\n"
+	echo -e " $GREEN*$BLUE Anonymous mode stopped\n"
 	sleep 4
 }
 
 function change {
-	service tor stop
-	sleep 1
-	service tor start
+	service tor reload
 	sleep 4
-	echo -e " $GREEN*$BLUE Restarted tor daemon and forced to change nodes\n"
+	echo -e " $GREEN*$BLUE Tor daemon reloaded and forced to change nodes\n"
 	sleep 1
 }
 
-
+function status {
+	service tor status
+}
 
 case "$1" in
     start)
-start
 init
+start
+;;
+	starti2p)
+starti2p
 ;;
     stop)
+init
 stop
+;;
+	stopi2p)
+stopi2p
 ;;
     restart)
 $0 stop
@@ -246,23 +301,36 @@ $0 start
     change)
 change
 ;;
+	status)
+status
+;;
     *)
 echo -e "
-Parrot AnonSurf Module (v 0.9.1)
+Parrot AnonSurf Module (v 1.1)
 	Usage:
-	$RED┌─[$GREEN$USER$YELLOW@$BLUE`hostname`$RED]─[$GREEN$PWD$RED]
-	$RED└──╼ \$$GREEN"" anonsurf $RED{$GREEN""start$RED|$GREEN""stop$RED|$GREEN""restart$RED|$GREEN""change$RED""}
+	$RED&#9484;&#9472;[$GREEN$USER$YELLOW@$BLUE`hostname`$RED]&#9472;[$GREEN$PWD$RED]
+	$RED&#9492;&#9472;&#9472;&#9596; \$$GREEN"" anonsurf $RED{$GREEN""start$RED|$GREEN""stop$RED|$GREEN""restart$RED|$GREEN""change$RED""$RED|$GREEN""status$RED""}
 	
-	$RED start$BLUE -$GREEN start system-wide anonymous
+	$RED start$BLUE -$GREEN Start system-wide anonymous
 		  tunneling under TOR proxy through iptables
 		  
-	$RED stop$BLUE -$GREEN reset original iptables settings
+	$RED stop$BLUE -$GREEN Reset original iptables settings
 		  and return to clear navigation
 	
-	$RED restart$BLUE -$GREEN combines \"stop\" and \"start\" options
+	$RED restart$BLUE -$GREEN Combines \"stop\" and \"start\" options
 	
 	
-	$RED change$BLUE -$GREEN changes identity restarting TOR
+	$RED change$BLUE -$GREEN Changes identity restarting TOR
+	
+	
+	$RED status$BLUE -$GREEN Check if AnonSurf is working properly
+	
+	----[ I2P related features ]----
+	
+	$RED starti2p$BLUE -$GREEN Start i2p services
+		  
+	$RED stopi2p$BLUE -$GREEN Stop i2p services
+	
 $RESETCOLOR" >&2
 exit 1
 ;;
