@@ -62,14 +62,29 @@ function init {
 	bleachbit -c adobe_reader.cache chromium.cache chromium.current_session chromium.history elinks.history emesene.cache epiphany.cache firefox.url_history flash.cache flash.cookies google_chrome.cache google_chrome.history  links2.history opera.cache opera.search_history opera.url_history system.cache system.memory system.recent_documents >&2	
 }
 
+
+
+
 function starti2p {
 	echo -e -n " $GREEN*$BLUE starting I2P services"
-	i2prouter start	
+	service tor stop
+	cp /etc/resolv.conf /etc/resolv.conf.bak
+	touch /etc/resolv.conf
+	echo -e 'nameserver 127.0.0.1\nnameserver 199.175.54.136' > /etc/resolv.conf
+	echo -e " $GREEN*$BLUE Modified resolv.conf to use localhost and FrozenDNS"
+	sudo service resolvconf start 2>/dev/null || echo -e "\nresolvconf already started"
+	sudo service nscd start
+	sudo service dnsmasq start
+	i2prouter start
 }
 
 function stopi2p {
 	echo -e -n " $GREEN*$BLUE stopping I2P services"
-	i2prouter stop	
+	i2prouter stop
+	if [ -e /etc/resolv.conf.bak ]; then
+		rm /etc/resolv.conf
+		cp /etc/resolv.conf.bak /etc/resolv.conf
+	fi
 }
 
 
@@ -193,6 +208,8 @@ function start {
 	iptables -F
 	iptables -t nat -F
 	
+	cp /etc/resolv.conf /etc/resolv.conf.bak
+	touch /etc/resolv.conf
 	echo -e 'nameserver 127.0.0.1\nnameserver 199.175.54.136' > /etc/resolv.conf
 	echo -e " $GREEN*$BLUE Modified resolv.conf to use Tor and FrozenDNS"
 
@@ -229,7 +246,7 @@ function start {
 	iptables -A OUTPUT -j REJECT
 
 	echo -e "$GREEN *$BLUE Redirected all traffic throught Tor\n"
-	echo -e "$GREEN[$BLUE i$GREEN ]$BLUE You are under AnonSurf-TOR tunnel$RESETCOLOR\n"
+	echo -e "$GREEN[$BLUE i$GREEN ]$BLUE You are under AnonSurf tunnel$RESETCOLOR\n"
 	sleep 4
 }
 
@@ -255,10 +272,13 @@ function stop {
 		echo -e " $GREEN*$BLUE Iptables rules restored"
 	fi
 	echo -e -n " $GREEN*$BLUE Service "
+	if [ -e /etc/resolv.conf.bak ]; then
+		rm /etc/resolv.conf
+		cp /etc/resolv.conf.bak /etc/resolv.conf
+	fi
 	service tor stop
 	service resolvconf start 2>/dev/null || echo -e "resolvconf already started"
 	service nscd start
-	service network-manager restart
 	service dnsmasq start
 	sleep 1
 	
