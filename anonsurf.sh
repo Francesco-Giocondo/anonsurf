@@ -53,13 +53,21 @@ TOR_UID="debian-tor"
 TOR_PORT="9040"
 
 
+function notify {
+	if [ -e /usr/bin/notify-send ]; then
+		notify-send "AnonSurf" "$1"
+	fi
+}
+
 
 function init {
 	echo -e -n " $GREEN*$BLUE killing dangerous applications"
 	killall -q chrome dropbox iceweasel skype icedove thunderbird firefox chromium xchat transmission
+	notify "dangerous applications killed"
 	
 	echo -e -n " $GREEN*$BLUE cleaning some dangerous caches"
-	bleachbit -c adobe_reader.cache chromium.cache chromium.current_session chromium.history elinks.history emesene.cache epiphany.cache firefox.url_history flash.cache flash.cookies google_chrome.cache google_chrome.history  links2.history opera.cache opera.search_history opera.url_history system.cache system.memory system.recent_documents >&2	
+	bleachbit -c adobe_reader.cache chromium.cache chromium.current_session chromium.history elinks.history emesene.cache epiphany.cache firefox.url_history flash.cache flash.cookies google_chrome.cache google_chrome.history  links2.history opera.cache opera.search_history opera.url_history system.cache system.memory system.recent_documents > /dev/null
+	notify "caches cleaned"
 }
 
 
@@ -76,6 +84,7 @@ function starti2p {
 	sudo service nscd start
 	sudo service dnsmasq start
 	i2prouter start
+	notify "I2P daemon started"
 }
 
 function stopi2p {
@@ -85,6 +94,7 @@ function stopi2p {
 		rm /etc/resolv.conf
 		cp /etc/resolv.conf.bak /etc/resolv.conf
 	fi
+	notify "I2P daemon stopped"
 }
 
 
@@ -247,6 +257,7 @@ function start {
 
 	echo -e "$GREEN *$BLUE Redirected all traffic throught Tor\n"
 	echo -e "$GREEN[$BLUE i$GREEN ]$BLUE You are under AnonSurf tunnel$RESETCOLOR\n"
+	notify "Global Anonymous Proxy Activated"
 	sleep 4
 }
 
@@ -283,6 +294,7 @@ function stop {
 	sleep 1
 	
 	echo -e " $GREEN*$BLUE Anonymous mode stopped\n"
+	notify "Global Anonymous Proxy Stopped"
 	sleep 4
 }
 
@@ -290,6 +302,7 @@ function change {
 	service tor reload
 	sleep 4
 	echo -e " $GREEN*$BLUE Tor daemon reloaded and forced to change nodes\n"
+	notify "Identity changed"
 	sleep 1
 }
 
@@ -326,7 +339,7 @@ status
 ;;
     *)
 echo -e "
-Parrot AnonSurf Module (v 1.1)
+Parrot AnonSurf Module (v 1.1.8)
 	Usage:
 	$RED&#9484;&#9472;[$GREEN$USER$YELLOW@$BLUE`hostname`$RED]&#9472;[$GREEN$PWD$RED]
 	$RED&#9492;&#9472;&#9472;&#9596; \$$GREEN"" anonsurf $RED{$GREEN""start$RED|$GREEN""stop$RED|$GREEN""restart$RED|$GREEN""change$RED""$RED|$GREEN""status$RED""}
