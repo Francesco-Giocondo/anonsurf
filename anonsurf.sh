@@ -55,9 +55,11 @@ TOR_PORT="9040"
 
 function notify {
 	if [ -e /usr/bin/notify-send ]; then
-		notify-send "AnonSurf" "$1"
+		/usr/bin/notify-send "AnonSurf" "$1"
 	fi
 }
+
+export notify
 
 
 function init {
@@ -65,9 +67,9 @@ function init {
 	killall -q chrome dropbox iceweasel skype icedove thunderbird firefox chromium xchat transmission
 	notify "dangerous applications killed"
 	
-	echo -e -n " $GREEN*$BLUE cleaning some dangerous caches"
-	bleachbit -c adobe_reader.cache chromium.cache chromium.current_session chromium.history elinks.history emesene.cache epiphany.cache firefox.url_history flash.cache flash.cookies google_chrome.cache google_chrome.history  links2.history opera.cache opera.search_history opera.url_history system.cache system.memory system.recent_documents > /dev/null
-	notify "caches cleaned"
+	echo -e -n " $GREEN*$BLUE cleaning some dangerous cache elements"
+	bleachbit -c adobe_reader.cache chromium.cache chromium.current_session chromium.history elinks.history emesene.cache epiphany.cache firefox.url_history flash.cache flash.cookies google_chrome.cache google_chrome.history  links2.history opera.cache opera.search_history opera.url_history &> /dev/null
+	notify "cache cleaned"
 }
 
 
@@ -78,23 +80,64 @@ function starti2p {
 	service tor stop
 	cp /etc/resolv.conf /etc/resolv.conf.bak
 	touch /etc/resolv.conf
-	echo -e 'nameserver 127.0.0.1\nnameserver 199.175.54.136' > /etc/resolv.conf
+	echo -e 'nameserver 127.0.0.1\nnameserver 199.175.54.136\nnameserver 23.94.123.134' > /etc/resolv.conf
 	echo -e " $GREEN*$BLUE Modified resolv.conf to use localhost and FrozenDNS"
-	sudo service resolvconf start 2>/dev/null || echo -e "\nresolvconf already started"
-	sudo service nscd start
-	sudo service dnsmasq start
-	i2prouter start
+	sudo -u i2psvc i2prouter start
+	iceweasel http://127.0.0.1:7657/home &
 	notify "I2P daemon started"
 }
 
 function stopi2p {
 	echo -e -n " $GREEN*$BLUE stopping I2P services"
-	i2prouter stop
+	sudo -u i2psvc i2prouter stop
 	if [ -e /etc/resolv.conf.bak ]; then
 		rm /etc/resolv.conf
 		cp /etc/resolv.conf.bak /etc/resolv.conf
 	fi
 	notify "I2P daemon stopped"
+}
+
+
+
+function ip {
+
+	echo -e "\nMy ip is:\n"
+	sleep 1
+	wget -qO- http://frozenbox.org/ip
+	echo -e "\n\n----------------------------------------------------------------------"
+}
+
+function iceweasel_tor {
+	directory="/dev/shm/.mozilla/firefox/profile/a6mpn2rf.default"
+	profile="profile_for_tor.tar.gz"
+
+	if [ -d "$directory" ] ; then
+		echo -e "\n[$CYAN nfo$RESETCOLOR ]$GREEN Please wait ...$RESETCOLOR\n"
+		notify "Please wait ..."
+		sleep 0.7
+		echo -e "\n[$CYAN nfo$RESETCOLOR ]$GREEN The profile was loaded in the ram.$RESETCOLOR\n"
+		notify "The profile was loaded in the ram."
+		sleep 0.4
+		killall -q iceweasel firefox
+		iceweasel -profile /dev/shm/.mozilla/firefox/profile/a6mpn2rf.default &
+		exit
+	else
+		echo -e "\n[$CYAN nfo$RESETCOLOR ]$GREEN Please wait ...$RESETCOLOR\n"
+		notify "Please wait ..."
+		sleep 0.3
+		cd /opt/anonsurf/
+		cp $profile /dev/shm/ #> /dev/null
+		sleep 0.3
+		cd /dev/shm/
+		tar xzvf $profile #> /dev/null
+		sleep 0.3
+		echo -e "\n[$CYAN nfo$RESETCOLOR ]$GREEN The profile was loaded in the ram.$RESETCOLOR\n"
+		notify "Starting browser in RAM-only mode"
+		sleep 0.4
+		killall -q iceweasel firefox
+		iceweasel -profile /dev/shm/.mozilla/firefox/profile/a6mpn2rf.default &
+		exit
+	fi
 }
 
 
@@ -204,9 +247,10 @@ function start {
 	if [ ! -e /var/run/tor/tor.pid ]; then
 		echo -e " $RED*$BLUE Tor is not running! $GREEN starting it $BLUE for you\n" >&2
 		echo -e -n " $GREEN*$BLUE Service " 
-		service resolvconf stop 2>/dev/null || echo -e "resolvconf already stopped"
+		service resolvconf stop
 		service dnsmasq stop
 		service nscd stop
+		sleep 4
 		service tor start
 		sleep 6
 	fi
@@ -220,7 +264,7 @@ function start {
 	
 	cp /etc/resolv.conf /etc/resolv.conf.bak
 	touch /etc/resolv.conf
-	echo -e 'nameserver 127.0.0.1\nnameserver 199.175.54.136' > /etc/resolv.conf
+	echo -e 'nameserver 127.0.0.1\nnameserver 199.175.54.136\nnameserver 23.94.123.134' > /etc/resolv.conf
 	echo -e " $GREEN*$BLUE Modified resolv.conf to use Tor and FrozenDNS"
 
 	# set iptables nat
@@ -255,7 +299,7 @@ function start {
 	iptables -A OUTPUT -m owner --uid-owner $TOR_UID -j ACCEPT
 	iptables -A OUTPUT -j REJECT
 
-	echo -e "$GREEN *$BLUE Redirected all traffic throught Tor\n"
+	echo -e "$GREEN *$BLUE All traffic was redirected throught Tor\n"
 	echo -e "$GREEN[$BLUE i$GREEN ]$BLUE You are under AnonSurf tunnel$RESETCOLOR\n"
 	notify "Global Anonymous Proxy Activated"
 	sleep 4
@@ -288,7 +332,8 @@ function stop {
 		cp /etc/resolv.conf.bak /etc/resolv.conf
 	fi
 	service tor stop
-	service resolvconf start 2>/dev/null || echo -e "resolvconf already started"
+	sleep 4
+	service resolvconf start
 	service nscd start
 	service dnsmasq start
 	sleep 1
@@ -311,57 +356,53 @@ function status {
 }
 
 case "$1" in
-    start)
-init
-start
-;;
-	starti2p)
-starti2p
-;;
-    stop)
-init
-stop
-;;
-	stopi2p)
-stopi2p
-;;
-    restart)
-$0 stop
-sleep 1
-$0 start
-
-;;
-    change)
-change
-;;
+	start)
+		init
+		start
+	;;
+	stop)
+		init
+		stop
+	;;
+	change)
+		change
+	;;
 	status)
-status
-;;
-    *)
+		status
+	;;
+	myip)
+		ip
+	;;
+	iceweasel_tor)
+		iceweasel_tor
+	;;
+	starti2p)
+		starti2p
+	;;
+	stopi2p)
+		stopi2p
+	;;
+	restart)
+		$0 stop
+		sleep 1
+		$0 start
+	;;
+   *)
 echo -e "
-Parrot AnonSurf Module (v 1.1.8)
+Parrot AnonSurf Module (v 1.3.1)
 	Usage:
-	$RED&#9484;&#9472;[$GREEN$USER$YELLOW@$BLUE`hostname`$RED]&#9472;[$GREEN$PWD$RED]
-	$RED&#9492;&#9472;&#9472;&#9596; \$$GREEN"" anonsurf $RED{$GREEN""start$RED|$GREEN""stop$RED|$GREEN""restart$RED|$GREEN""change$RED""$RED|$GREEN""status$RED""}
+	$RED┌──[$GREEN$USER$YELLOW@$BLUE`hostname`$RED]─[$GREEN$PWD$RED]
+	$RED└──╼ \$$GREEN"" anonsurf $RED{$GREEN""start$RED|$GREEN""stop$RED|$GREEN""restart$RED|$GREEN""change$RED""$RED|$GREEN""status$RED""}
 	
 	$RED start$BLUE -$GREEN Start system-wide anonymous
-		  tunneling under TOR proxy through iptables
-		  
+		  tunneling under TOR proxy through iptables	  
 	$RED stop$BLUE -$GREEN Reset original iptables settings
 		  and return to clear navigation
-	
 	$RED restart$BLUE -$GREEN Combines \"stop\" and \"start\" options
-	
-	
 	$RED change$BLUE -$GREEN Changes identity restarting TOR
-	
-	
 	$RED status$BLUE -$GREEN Check if AnonSurf is working properly
-	
 	----[ I2P related features ]----
-	
 	$RED starti2p$BLUE -$GREEN Start i2p services
-		  
 	$RED stopi2p$BLUE -$GREEN Stop i2p services
 	
 $RESETCOLOR" >&2
