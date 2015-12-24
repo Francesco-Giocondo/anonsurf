@@ -1,6 +1,7 @@
 anonsurf
 ========
-this repo is no more used
+this repo is no more used,
+
 check github.com/parrotsec/anonsurf instead
 
 ========
