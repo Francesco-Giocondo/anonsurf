@@ -1,5 +1,9 @@
 anonsurf
 ========
+this repo is no more used
+check github.com/parrotsec/anonsurf instead
+
+========
 
 ParrotSec AnonSurf core module
 
